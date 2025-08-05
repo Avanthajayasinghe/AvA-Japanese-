@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="si">
+<head>
+  <meta charset="UTF-8">
+  <title>JLPT Kanji Quiz</title>
+  <style>
+    body {
+      font-family: 'Noto Sans Sinhala', sans-serif;
+      max-width: 800px;
+      margin: 30px auto;
+      padding: 20px;
+      border: 2px solid #444;
+      border-radius: 8px;
+      background: #fafafa;
+      text-align: center;
+    }
+    h2,h3 { margin: 10px 0; }
+    #levelMenu, #partMenu, #quizArea, #finalResultArea { display: none; }
+    .optionBtn {
+      display: block;
+      width: 80%;
+      margin: 10px auto;
+      padding: 12px;
+      font-size: 22px;
+      border: 2px solid #666;
+      border-radius: 6px;
+      background: white;
+      cursor: pointer;
+    }
+    .optionBtn:hover { background: #eee; }
+    #kanjiBox {
+      font-size: 160px;
+      border: 2px solid #333;
+      margin: 20px 0;
+      padding: 10px;
+      user-select: none;
+    }
+    #scoreBox {
+      font-size: 20px;
+      margin-bottom: 10px;
+      font-weight: bold;
+    }
+    #resultMsg {
+      font-size: 22px;
+      font-weight: bold;
+      margin-top: 15px;
+      min-height: 30px;
+    }
+    #restartBtn {
+      margin-top: 20px;
+      padding: 10px 20px;
+      font-size: 18px;
+      background: #2196F3;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+  <h2>JLPT Kanji Quiz</h2>
+
+  <!-- Level Select -->
+  <div id="levelMenu">
+    <h3>ඔබට අවශ්‍ය Level එක තෝරන්න</h3>
+    <button onclick="chooseLevel('N5')">N5 (103 Kanji)</button>
+    <button onclick="chooseLevel('N4')">N4 (181 Kanji)</button>
+    <button onclick="chooseLevel('N3')">N3 (363 Kanji)</button>
+  </div>
+
+  <!-- Part + Question Menu -->
+  <div id="partMenu">
+    <h3 id="levelTitle"></h3>
+    <div id="parts"></div>
+    <h3>ප්‍රශ්න ගණන තෝරන්න</h3>
+    <select id="questionCount">
+      <option value="5">5</option>
+      <option value="10" selected>10</option>
+      <option value="20">20</option>
+      <option value="all">සියල්ල</option>
+    </select>
+    <br><br>
+    <button onclick="startQuiz()">🚀 Start Quiz</button>
+  </div>
+
+  <!-- Quiz -->
+  <div id="quizArea">
+    <div id="scoreBox">Score: 0 / 0</div>
+    <div id="kanjiBox">一</div>
+    <div id="options"></div>
+    <div id="resultMsg"></div>
+  </div>
+
+  <!-- Final Result -->
+  <div id="finalResultArea">
+    <h3>අවසාන ප්‍රතිඵල</h3>
+    <div id="finalResult"></div>
+    <button id="restartBtn" onclick="showLevelMenu()">🔄 නැවත අරඹන්න</button>
+  </div>
+
+<script>
+  // 📌 JLPT Kanji datasets
+  const kanjiSets = {
+   N5: [
+  {kanji:"一", meaning:"එක"},
+  {kanji:"二", meaning:"දෙක"},
+  {kanji:"三", meaning:"තුන"},
+  {kanji:"四", meaning:"හතර"},
+  {kanji:"五", meaning:"පහ"},
+  {kanji:"六", meaning:"හය"},
+  {kanji:"七", meaning:"හත"},
+  {kanji:"八", meaning:"අට"},
+  {kanji:"九", meaning:"නවය"},
+  {kanji:"十", meaning:"දහය"},
+  {kanji:"百", meaning:"සියය"},
+  {kanji:"千", meaning:"දහස"},
+  {kanji:"万", meaning:"දශසහස"},
+  {kanji:"円", meaning:"යෙන් / මුදල්"},
+  {kanji:"上", meaning:"ඉහළ"},
+  {kanji:"下", meaning:"පහළ"},
+  {kanji:"中", meaning:"මැද / තුල"},
+  {kanji:"大", meaning:"ලොකු"},
+  {kanji:"小", meaning:"කුඩා"},
+  {kanji:"月", meaning:"සඳ / මාසය"},
+  {kanji:"日", meaning:"දවස / සූරිය"},
+  {kanji:"年", meaning:"අවුරුද්ද"},
+  {kanji:"時", meaning:"වේලාව"},
+  {kanji:"分", meaning:"මිනිත්තු / කොටස"},
+  {kanji:"今", meaning:"දැන්"},
+  {kanji:"何", meaning:"මොනවාද"},
+  {kanji:"先", meaning:"ඉදිරිය / පෙර"},
+  {kanji:"毎", meaning:"සෑම / හැම"},
+  {kanji:"午", meaning:"මධ්‍යහ්නය"},
+  {kanji:"前", meaning:"ඉදිරිය / පෙර"},
+  {kanji:"後", meaning:"පසු / පසෙක"},
+  {kanji:"間", meaning:"අතර / අතරමං"},
+  {kanji:"東", meaning:"නැගෙනහිර"},
+  {kanji:"西", meaning:"බටහිර"},
+  {kanji:"南", meaning:"දකුණ"},
+  {kanji:"北", meaning:"උතුර"},
+  {kanji:"口", meaning:"මූණ / තොට"},
+  {kanji:"目", meaning:"ඇස"},
+  {kanji:"耳", meaning:"කන"},
+  {kanji:"手", meaning:"අත"},
+  {kanji:"足", meaning:"පා"},
+  {kanji:"力", meaning:"බලය"},
+  {kanji:"男", meaning:"පුරුෂ"},
+  {kanji:"女", meaning:"ගැහැණු"},
+  {kanji:"子", meaning:"ළමය"},
+  {kanji:"父", meaning:"තාත්තා"},
+  {kanji:"母", meaning:"අම්මා"},
+  {kanji:"友", meaning:"යාලුවා"},
+  {kanji:"人", meaning:"මිනිසා"},
+  {kanji:"名", meaning:"නම"},
+  {kanji:"先生", meaning:"ගුරු"},
+  {kanji:"先週", meaning:"පසුගිය සතිය"},
+  {kanji:"来週", meaning:"ඉදිරි සතිය"},
+  {kanji:"学校", meaning:"පාසල"},
+  {kanji:"生", meaning:"ජීවිතය / සිසු"},
+  {kanji:"学", meaning:"ඉගෙනීම"},
+  {kanji:"校", meaning:"පාසල"},
+  {kanji:"入", meaning:"ඇතුල් වීම"},
+  {kanji:"出", meaning:"පිටවීම"},
+  {kanji:"行", meaning:"යනවා"},
+  {kanji:"来", meaning:"එනවා"},
+  {kanji:"帰", meaning:"ආපසු යනවා"},
+  {kanji:"見", meaning:"බලනවා"},
+  {kanji:"聞", meaning:"අහනවා"},
+  {kanji:"話", meaning:"කතා කරනවා"},
+  {kanji:"言", meaning:"කියනවා"},
+  {kanji:"読", meaning:"කියවනවා"},
+  {kanji:"書", meaning:"ලියනවා"},
+  {kanji:"食", meaning:"කනවා"},
+  {kanji:"飲", meaning:"බොනවා"},
+  {kanji:"買", meaning:"ගන්නවා"},
+  {kanji:"売", meaning:"විකිණනවා"},
+  {kanji:"休", meaning:"විවේකය"},
+  {kanji:"車", meaning:"රථය / කාරය"},
+  {kanji:"駅", meaning:"රෙල් ගේට්ටුව"},
+  {kanji:"道", meaning:"මාර්ගය"},
+  {kanji:"山", meaning:"කන්ද"},
+  {kanji:"川", meaning:"ගඟ"},
+  {kanji:"雨", meaning:"වැස්ස"},
+  {kanji:"天", meaning:"ඉහළ / දේව"},
+  {kanji:"空", meaning:"අහස / හිස්"},
+  {kanji:"火", meaning:"ගින්න"},
+  {kanji:"水", meaning:"වතුර"},
+  {kanji:"木", meaning:"ගස / ලී"},
+  {kanji:"金", meaning:"මුදල් / රිදී"},
+  {kanji:"土", meaning:"පස"},
+  {kanji:"花", meaning:"මල"},
+  {kanji:"草", meaning:"ඇල / ගස් කොළ"},
+  {kanji:"竹", meaning:"බඹර ගස්"},
+  {kanji:"糸", meaning:"නූල්"},
+  {kanji:"米", meaning:"අරහ"},
+  {kanji:"貝", meaning:"ගවියා"},
+  {kanji:"石", meaning:"ගල්"},
+  {kanji:"犬", meaning:"බල්ලා"},
+  {kanji:"魚", meaning:"මාළු"},
+  {kanji:"鳥", meaning:"කුරුල්ලා"},
+  {kanji:"馬", meaning:"අශ්වය"},
+  {kanji:"駅", meaning:"ස්ථානය"},
+  {kanji:"社", meaning:"සමාගම / ආයතනය"},
+  {kanji:"電", meaning:"විදුලිය"},
+  {kanji:"語", meaning:"භාෂාව"},
+  {kanji:"国", meaning:"රට"},
+  {kanji:"円", meaning:"යෙන්"},
+  {kanji:"白", meaning:"සුදු"},
+  {kanji:"赤", meaning:"රතු"},
+  {kanji:"青", meaning:"නිල්"},
+  {kanji:"黒", meaning:"කලු"},
+  {kanji:"上手", meaning:"හොඳින් කරනවා"},
+  {kanji:"下手", meaning:"අඩු / හොඳ නැති"},
+],
+    N4: [
+      {kanji:"体", meaning:"ශරීරය"}, {kanji:"会", meaning:"සමඟවීම"}, {kanji:"住", meaning:"පදිංචිය"},
+      {kanji:"信", meaning:"විශ්වාසය"}, {kanji:"働", meaning:"වැඩ කරනවා"}, {kanji:"医", meaning:"වෛද්‍ය"}
+      // 👉 N4 එකට 181 Kanji
+    ],
+    N3: [
+      {kanji:"愛", meaning:"ආදරය"}, {kanji:"案", meaning:"යෝජනාව"}, {kanji:"以", meaning:"අයත්"},
+      {kanji:"位", meaning:"තත්ත්වය"}, {kanji:"員", meaning:"අදාල පුද්ගලයෙක්"}
+      // 👉 N3 එකට 363 Kanji
+    ]
+  };
+
+  // ============ Script Logic ============
+  let selectedLevel = null;
+  let selectedData = [];
+  let currentKanji = null;
+  let score = 0, attempts = 0, asked = 0, totalQuestions = 0;
+
+  const levelMenu = document.getElementById("levelMenu");
+  const partMenu = document.getElementById("partMenu");
+  const levelTitle = document.getElementById("levelTitle");
+  const partsDiv = document.getElementById("parts");
+  const quizArea = document.getElementById("quizArea");
+  const kanjiBox = document.getElementById("kanjiBox");
+  const optionsDiv = document.getElementById("options");
+  const resultMsg = document.getElementById("resultMsg");
+  const scoreBox = document.getElementById("scoreBox");
+  const finalResultArea = document.getElementById("finalResultArea");
+  const finalResult = document.getElementById("finalResult");
+
+  showLevelMenu();
+
+  function showLevelMenu() {
+    levelMenu.style.display = "block";
+    partMenu.style.display = "none";
+    quizArea.style.display = "none";
+    finalResultArea.style.display = "none";
+  }
+
+  function chooseLevel(level) {
+    selectedLevel = level;
+    levelTitle.textContent = `${level} Level - Kanji ${kanjiSets[level].length}ක් ඇත`;
+    levelMenu.style.display = "none";
+    partMenu.style.display = "block";
+    partsDiv.innerHTML = "";
+
+    const data = kanjiSets[level];
+    let chunks = [];
+    for (let i=0; i<data.length; i+=10) chunks.push(data.slice(i,i+10));
+
+    chunks.forEach((p,i)=>{
+      const cb=document.createElement("input");
+      cb.type="checkbox"; cb.id="part"+i; cb.value=i;
+      const lbl=document.createElement("label");
+      lbl.htmlFor="part"+i;
+      lbl.textContent=`Part ${i+1} (Kanji ${i*10+1} – ${i*10+p.length})`;
+      partsDiv.appendChild(cb);
+      partsDiv.appendChild(lbl);
+      partsDiv.appendChild(document.createElement("br"));
+    });
+  }
+
+  function startQuiz() {
+    selectedData=[];
+    const data=kanjiSets[selectedLevel];
+    for(let i=0;i<data.length;i+=10){
+      const cb=document.getElementById("part"+(i/10));
+      if(cb && cb.checked) selectedData=selectedData.concat(data.slice(i,i+10));
+    }
+    if(selectedData.length===0){ alert("කරුණාකර කොටස් තෝරන්න!"); return; }
+
+    const qSel=document.getElementById("questionCount").value;
+    totalQuestions=(qSel==="all")?selectedData.length:parseInt(qSel);
+
+    score=0;attempts=0;asked=0;updateScore();
+    partMenu.style.display="none";quizArea.style.display="block";
+    nextKanji();
+  }
+
+  function updateScore(){ scoreBox.textContent=`Score: ${score} / ${attempts}`; }
+
+  function nextKanji(){
+    if(asked>=totalQuestions){ showFinalResult(); return; }
+    resultMsg.textContent=""; optionsDiv.innerHTML="";
+    currentKanji=selectedData[Math.floor(Math.random()*selectedData.length)];
+    kanjiBox.textContent=currentKanji.kanji;
+
+    let options=[currentKanji.meaning];
+    while(options.length<4){
+      const wrong=selectedData[Math.floor(Math.random()*selectedData.length)].meaning;
+      if(!options.includes(wrong)) options.push(wrong);
+    }
+    options.sort(()=>Math.random()-0.5);
+
+    options.forEach(opt=>{
+      const btn=document.createElement("button");
+      btn.className="optionBtn"; btn.textContent=opt;
+      btn.onclick=()=>checkAnswer(opt);
+      optionsDiv.appendChild(btn);
+    });
+    asked++;
+  }
+
+  function checkAnswer(selected){
+    attempts++;
+    if(selected===currentKanji.meaning){
+      score++; resultMsg.textContent="✅ හරි!"; resultMsg.style.color="green";
+      updateScore(); setTimeout(nextKanji,1000);
+    } else {
+      resultMsg.textContent="❌ වැරදි"; resultMsg.style.color="red";
+      updateScore();
+    }
+  }
+
+  function showFinalResult(){
+    quizArea.style.display="none"; finalResultArea.style.display="block";
+    let percent=Math.round((score/attempts)*100);
+    let grade=percent>=80?"A":percent>=60?"B":percent>=40?"C":"F";
+    finalResult.innerHTML=`✅ අවසාන ප්‍රතිඵල:<br>ඔබගේ Score: ${score} / ${attempts}<br>Percentage: ${percent}%<br>Grade: ${grade}`;
+  }
+</script>
+
+</body>
+</html>
